@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+    <title>来自我的小惊喜</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background: linear-gradient(to bottom, #fff8f8, #ffeef8);
+            font-family: -apple-system, BlinkMacSystemFont, 'Microsoft YaHei', sans-serif;
+            height: 100vh; touch-action: manipulation;
+        }
+        .tip {
+            position: fixed; padding: 8px 16px; border-radius: 16px;
+            font-weight: bold; text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            cursor: pointer; user-select: none;
+            transition: all 0.3s ease; z-index: 9999;
+            backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+            transform: translateZ(0);
+        }
+        .tip:active { transform: scale(0.95); }
+        .fade-out {
+            opacity: 0 !important; transform: scale(0.7) !important;
+            pointer-events: none;
+        }
+        .ending {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(255, 240, 245, 0.98);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            font-size: 36px; color: #d81b60;
+            z-index: 10000; opacity: 0;
+            transition: opacity 1.5s ease;
+            pointer-events: none; padding: 20px;
+            text-align: center;
+        }
+        .ending.show { opacity: 1; pointer-events: auto; }
+        .ending p { margin: 16px 0; font-weight: bold; }
+        .heart { font-size: 80px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
+        @supports (padding: max(0px)) {
+            .ending { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="ending" class="ending">
+    <div class="heart">❤️</div>
+    <p style="font-size:32px; color:#e91e63; margin-top:20px;">我喜欢你</p>
+</div>
+
+<script>
+const isMobile = /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+const HEART_CONFIG = {
+    count: isMobile ? 40 : 60,
+    displayTime: 10000,
+    createDelay: isMobile ? 120 : 80,
+    scale: 0.5,
+    fontSize: 13,
+    fontFamily: '-apple-system, "Microsoft YaHei"'
+};
+const RAIN_CONFIG = {
+    count: isMobile ? 120 : 220,
+    displayTime: 12000,
+    createDelay: isMobile ? 35 : 18,
+    fontSize: 16,
+    fontFamily: '"Microsoft YaHei", sans-serif'
+};
+const TIPS = ['好好吃饭','好好休息','早点休息','天天开心','记得喝水','按时吃饭','别熬夜了','照顾好自己','注意身体','记得运动','放松一下','保持微笑','劳逸结合','别太劳累','记得午休','多吃水果','出去走走','呼吸新鲜空气','保持好心情','别久坐','记得早餐','保护眼睛','注意保暖','别着凉','保持健康','平安喜乐','开心每一天','一切顺利','万事如意','心想事成','多喝水哦~','每天都要元气满满','我想你了','梦想成真','金榜题名'];
+const COLORS = ['#ffb6c1','#87ceeb','#90ee90','#e6e6fa','#ffffe0','#dda0dd','#ff7f50','#f4a460','#66cdaa','#ffe4e1'];
+
+let heartWindows = [], rainWindows = [];
+let heartCreated = 0, rainCreated = 0, rainAllCreated = false;
+let heartPhaseEnded = false;
+let forceNextTimeout = null;
+let screenW = window.innerWidth, screenH = window.innerHeight;
+
+function random(min, max) { return Math.random() * (max - min) + min; }
+
+function getHeartPos(index, total) {
+    const t = 2 * Math.PI * index / total;
+    const x = 16 * Math.pow(Math.sin(t), 3);
+    const y = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+    const scale = Math.min(screenW, screenH * 0.8) * HEART_CONFIG.scale / 16;
+    const centerX = screenW / 2;
+    const centerY = screenH / 2 - 30;
+    let finalX = centerX + x * scale + random(-10, 10);
+    let finalY = centerY - y * scale + random(-10, 10);
+    const padding = 60;
+    finalX = Math.max(padding, Math.min(finalX, screenW - padding - 120));
+    finalY = Math.max(padding, Math.min(finalY, screenH - padding - 80));
+    return { x: finalX, y: finalY };
+}
+
+function createDiv(config, isHeart = false, index = 0) {
+    const div = document.createElement('div');
+    const tip = TIPS[Math.floor(Math.random() * TIPS.length)];
+    const bg = COLORS[Math.floor(Math.random() * COLORS.length)];
+    div.className = 'tip';
+    div.textContent = tip;
+
+    let x, y;
+    if (isHeart) {
+        const pos = getHeartPos(index, config.count);
+        x = pos.x; y = pos.y;
+    } else {
+        x = random(20, screenW - 140);
+        y = random(20, screenH - 100);
+    }
+
+    div.style.cssText = `
+        background:${bg}; color:black; font-size:${config.fontSize}px;
+        font-family:${config.fontFamily}; width:auto; min-width:100px;
+        height:${config.fontSize * 2.2}px; line-height:${config.fontSize * 2.2}px;
+        opacity:${isHeart ? 0.96 : 0.94}; border:1px solid rgba(255,255,255,0.3);
+        left:${x}px; top:${y}px;
+    `;
+
+    div.onclick = div.ontouchstart = (e) => {
+        e.preventDefault();
+        safeDestroy({ div, timeout: 0 }, isHeart ? 'heart' : 'rain');
+    };
+
+    document.body.appendChild(div);
+
+    const timeout = setTimeout(() => {
+        safeDestroy({ div, timeout: 0 }, isHeart ? 'heart' : 'rain');
+    }, config.displayTime);
+
+    const entry = { div, timeout };
+    if (isHeart) heartWindows.push(entry);
+    else rainWindows.push(entry);
+
+    return entry;
+}
+
+function safeDestroy(entry, type) {
+    let container = type === 'heart' ? heartWindows : rainWindows;
+    const index = container.indexOf(entry);
+    if (index !== -1) container.splice(index, 1);
+
+    clearTimeout(entry.timeout);
+    entry.div.classList.add('fade-out');
+
+    setTimeout(() => {
+        if (entry.div.parentNode) entry.div.parentNode.removeChild(entry.div);
+        checkPhaseTransition();
+    }, 600);
+}
+
+function checkPhaseTransition() {
+    if (!heartPhaseEnded && heartCreated === HEART_CONFIG.count && heartWindows.length === 0) {
+        heartPhaseEnded = true;
+        setTimeout(startRain, 800);
+    }
+    if (heartPhaseEnded && rainAllCreated && rainWindows.length === 0) {
+        showEnding();
+    }
+}
+
+function showEnding() {
+    if (forceNextTimeout) clearTimeout(forceNextTimeout);
+    const ending = document.getElementById('ending');
+    ending.classList.add('show');
+    setTimeout(() => {
+        document.body.innerHTML = '<div style="text-align:center;margin-top:50vh;transform:translateY(-50%);font-size:28px;color:#d81b60;">❤️ 喜欢你哦 ❤️</div>';
+    }, 5000);
+}
+
+function startHeart() {
+    if (heartCreated < HEART_CONFIG.count) {
+        createDiv(HEART_CONFIG, true, heartCreated);
+        heartCreated++;
+        setTimeout(startHeart, HEART_CONFIG.createDelay);
+    } else {
+        forceNextTimeout = setTimeout(() => {
+            heartWindows.forEach(entry => safeDestroy(entry, 'heart'));
+            heartWindows = [];
+        }, HEART_CONFIG.displayTime + 1000);
+    }
+}
+
+function startRain() {
+    rainCreated = 0; rainAllCreated = false;
+    createNextRain();
+}
+function createNextRain() {
+    if (rainCreated < RAIN_CONFIG.count) {
+        createDiv(RAIN_CONFIG, false);
+        rainCreated++;
+        setTimeout(createNextRain, RAIN_CONFIG.createDelay);
+    } else {
+        rainAllCreated = true;
+    }
+}
+
+window.addEventListener('load', () => {
+    screenW = window.innerWidth;
+    screenH = window.innerHeight;
+    setTimeout(startHeart, 300);
+});
+
+window.addEventListener('resize', () => {
+    screenW = window.innerWidth;
+    screenH = window.innerHeight;
+});
+</script>
+</body>
+</html>
